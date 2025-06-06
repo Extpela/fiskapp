@@ -3,59 +3,168 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Söröya 2025</title>
+  <title>Fiskregistrering</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 1em;
+      margin: 0;
       background: #f7f7f7;
     }
-    form, pre {
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    form {
       background: white;
       padding: 1em;
-      border-radius: 10px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       max-width: 500px;
-      margin: 1em auto;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin: auto;
     }
-    select, input, button {
+
+    select, input[type="number"], button {
       width: 100%;
-      padding: 0.6em;
+      padding: 0.7em;
       margin-top: 0.5em;
       font-size: 1em;
     }
-    button {
-      background: #2b7de9;
-      color: white;
+
+    #resultat {
+      text-align: center;
+      margin-top: 1em;
+      font-weight: bold;
+      color: green;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      max-width: 500px;
+      margin: 1em auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    li {
+      padding: 0.8em;
+      border-bottom: 1px solid #eee;
+    }
+
+    .actions {
+      margin-top: 0.5em;
+    }
+
+    .actions button {
+      width: auto;
+      display: inline-block;
+      margin-right: 0.5em;
+      background: #eee;
+      color: #333;
       border: none;
+      padding: 0.4em 0.8em;
       border-radius: 5px;
+      cursor: pointer;
+    }
+
+    pre {
+      background: white;
+      padding: 1em;
+      border-radius: 12px;
+      max-width: 500px;
+      margin: auto;
       margin-top: 1em;
     }
   </style>
 </head>
 <body>
-  <h1 style="text-align:center;">Registrera fångst</h1>
+  <h1>Registrera fisk</h1>
   <form id="fiskForm">
+    <input type="hidden" id="redigerarIndex" value="">
+    <label>Fiskare</label>
     <select id="fiskare" required>
       <option>Peter</option><option>David</option><option>Hasse</option>
       <option>Viktor</option><option>Linus</option><option>Hans A</option>
       <option>Niklas</option><option>Kobba</option><option>Philip</option>
     </select>
+
+    <label>Fisksort</label>
     <select id="sort" required>
       <option>Torsk</option><option>Gråsej</option><option>Hälleflundra</option>
       <option>Lubb</option><option>Uer</option><option>Långa</option>
     </select>
-    <input type="number" id="vikt" placeholder="Vikt i kg" step="0.1" required />
-    <button type="submit">Registrera</button>
+
+    <label>Vikt (kg)</label>
+    <input type="number" id="vikt" step="0.1" required>
+
+    <button type="submit">Spara</button>
   </form>
 
+  <p id="resultat"></p>
+
+  <h2>Registreringar</h2>
+  <ul id="lista"></ul>
+
+  <h2>Summering per fisksort</h2>
   <pre id="summaSort"></pre>
+
+  <h2>Summering per fiskare</h2>
   <pre id="summaFiskare"></pre>
 
   <script>
-    async function summeraOchVisa() {
+    let aktuellData = [];
+
+    async function hämtaData() {
       const res = await fetch('/data');
-      const data = await res.json();
+      return await res.json();
+    }
+
+    async function sparaAllData(data) {
+      await fetch('/registrera', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    }
+
+    async function radera(index) {
+      aktuellData.splice(index, 1);
+      await sparaAllData(aktuellData);
+      visaLista();
+      summeraOchVisa();
+    }
+
+    function fyllForm(post, index) {
+      document.getElementById('fiskare').value = post.fiskare;
+      document.getElementById('sort').value = post.sort;
+      document.getElementById('vikt').value = post.vikt;
+      document.getElementById('redigerarIndex').value = index;
+    }
+
+    async function visaLista() {
+      aktuellData = await hämtaData();
+      const lista = document.getElementById('lista');
+      lista.innerHTML = '';
+
+      aktuellData.forEach((post, index) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <strong>${post.fiskare}</strong> fick <strong>${post.sort}</strong>: ${post.vikt} kg<br>
+          <small>${post.tid}</small>
+          <div class="actions">
+            <button onclick="fyllForm(aktuellData[${index}], ${index})">✏️ Redigera</button>
+            <button onclick="radera(${index})">🗑️ Radera</button>
+          </div>
+        `;
+        lista.appendChild(li);
+      });
+    }
+
+    async function summeraOchVisa() {
+      const data = await hämtaData();
       const sorter = {}, fiskare = {};
 
       data.forEach(item => {
@@ -72,21 +181,30 @@
 
     document.getElementById('fiskForm').addEventListener('submit', async e => {
       e.preventDefault();
-      const post = {
+      const index = document.getElementById('redigerarIndex').value;
+      const nyPost = {
         fiskare: document.getElementById('fiskare').value,
         sort: document.getElementById('sort').value,
         vikt: parseFloat(document.getElementById('vikt').value),
         tid: new Date().toLocaleString('sv-SE')
       };
-      await fetch('/registrera', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(post)
-      });
+
+      if (index === '') {
+        aktuellData.push(nyPost);
+      } else {
+        aktuellData[index] = nyPost;
+      }
+
+      await sparaAllData(aktuellData);
+
       document.getElementById('fiskForm').reset();
+      document.getElementById('redigerarIndex').value = '';
+      visaLista();
       summeraOchVisa();
+      document.getElementById('resultat').innerText = 'Registrering sparad!';
     });
 
+    visaLista();
     summeraOchVisa();
   </script>
 </body>
