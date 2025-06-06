@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fiskregistrering</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1em;
+      background: #f7f7f7;
+    }
+    form, pre {
+      background: white;
+      padding: 1em;
+      border-radius: 10px;
+      max-width: 500px;
+      margin: 1em auto;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    select, input, button {
+      width: 100%;
+      padding: 0.6em;
+      margin-top: 0.5em;
+      font-size: 1em;
+    }
+    button {
+      background: #2b7de9;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      margin-top: 1em;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-align:center;">Registrera fisk</h1>
+  <form id="fiskForm">
+    <select id="fiskare" required>
+      <option>Peter</option><option>David</option><option>Hasse</option>
+      <option>Viktor</option><option>Linus</option><option>Hans A</option>
+      <option>Niklas</option><option>Kobba</option><option>Philip</option>
+    </select>
+    <select id="sort" required>
+      <option>Torsk</option><option>Gråsej</option><option>Hälleflundra</option>
+      <option>Lubb</option><option>Uer</option><option>Långa</option>
+    </select>
+    <input type="number" id="vikt" placeholder="Vikt i kg" step="0.1" required />
+    <button type="submit">Registrera</button>
+  </form>
+
+  <pre id="summaSort"></pre>
+  <pre id="summaFiskare"></pre>
+
+  <script>
+    async function summeraOchVisa() {
+      const res = await fetch('/data');
+      const data = await res.json();
+      const sorter = {}, fiskare = {};
+
+      data.forEach(item => {
+        sorter[item.sort] = (sorter[item.sort] || 0) + item.vikt;
+        fiskare[item.fiskare] = (fiskare[item.fiskare] || 0) + item.vikt;
+      });
+
+      document.getElementById('summaSort').textContent =
+        Object.entries(sorter).map(([s, v]) => `🐟 ${s}: ${v.toFixed(1)} kg`).join("\n");
+
+      document.getElementById('summaFiskare').textContent =
+        Object.entries(fiskare).map(([n, v]) => `👤 ${n}: ${v.toFixed(1)} kg`).join("\n");
+    }
+
+    document.getElementById('fiskForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const post = {
+        fiskare: document.getElementById('fiskare').value,
+        sort: document.getElementById('sort').value,
+        vikt: parseFloat(document.getElementById('vikt').value),
+        tid: new Date().toLocaleString('sv-SE')
+      };
+      await fetch('/registrera', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(post)
+      });
+      document.getElementById('fiskForm').reset();
+      summeraOchVisa();
+    });
+
+    summeraOchVisa();
+  </script>
+</body>
+</html>
