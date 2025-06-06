@@ -92,7 +92,7 @@
     </select>
 
     <label>Fisksort</label>
-    <select id="sort" required>
+    <select id="fisksort" required>
       <option>Torsk</option><option>Gråsej</option><option>Hälleflundra</option>
       <option>Lubb</option><option>Uer</option><option>Långa</option>
     </select>
@@ -139,7 +139,7 @@
 
     function fyllForm(post, index) {
       document.getElementById('fiskare').value = post.fiskare;
-      document.getElementById('sort').value = post.sort;
+      document.getElementById('fisksort').value = post.fisksort;
       document.getElementById('vikt').value = post.vikt;
       document.getElementById('redigerarIndex').value = index;
     }
@@ -152,7 +152,7 @@
       aktuellData.forEach((post, index) => {
         const li = document.createElement('li');
         li.innerHTML = `
-          <strong>${post.fiskare}</strong> fick <strong>${post.sort}</strong>: ${post.vikt} kg<br>
+          <strong>${post.fiskare}</strong> fick <strong>${post.fisksort}</strong>: ${post.vikt} kg<br>
           <small>${post.tid}</small>
           <div class="actions">
             <button onclick="fyllForm(aktuellData[${index}], ${index})">✏️ Redigera</button>
@@ -168,7 +168,7 @@
       const sorter = {}, fiskare = {};
 
       data.forEach(item => {
-        sorter[item.sort] = (sorter[item.sort] || 0) + item.vikt;
+        sorter[item.fisksort] = (sorter[item.fisksort] || 0) + item.vikt;
         fiskare[item.fiskare] = (fiskare[item.fiskare] || 0) + item.vikt;
       });
 
@@ -184,7 +184,7 @@
       const index = document.getElementById('redigerarIndex').value;
       const nyPost = {
         fiskare: document.getElementById('fiskare').value,
-        sort: document.getElementById('sort').value,
+        sort: document.getElementById('fisksort').value,
         vikt: parseFloat(document.getElementById('vikt').value),
         tid: new Date().toLocaleString('sv-SE')
       };
