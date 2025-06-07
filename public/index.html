@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Söröya 2025</title>
+  <title>Fiskregistrering</title>
   <style>
     body {
       font-family: sans-serif;
@@ -82,7 +82,7 @@
   </style>
 </head>
 <body>
-  <h1>Registrera fångst</h1>
+  <h1>Registrera fisk</h1>
   <form id="fiskForm">
     <input type="hidden" id="redigerarIndex" value="">
     <label>Fiskare</label>
@@ -130,10 +130,16 @@
       document.getElementById('redigerarIndex').value = index;
     }
 
+    async function radera(id) {
+      await fetch('/radera/' + id, { method: 'DELETE' });
+      visaLista();
+      summeraOchVisa();
+    }
+
     async function visaLista() {
       aktuellData = (await hämtaData()).filter(post =>
         post && post.fiskare && post.fisksort && !isNaN(post.vikt)
-    );
+      );
       const lista = document.getElementById('lista');
       lista.innerHTML = '';
 
@@ -144,6 +150,7 @@
           <small>${post.tid}</small>
           <div class="actions">
             <button onclick="fyllForm(aktuellData[${index}], ${index})">✏️ Redigera</button>
+            <button onclick="radera('${post.id}')">🗑️ Radera</button>
           </div>
         `;
         lista.appendChild(li);
@@ -177,9 +184,9 @@
       }
 
       const nyPost = {
-        fiskare: fiskareEl.value || 'okänd',
-        fisksort: fisksortEl.value || 'okänd',
-        vikt: parseFloat(viktEl.value) || 0,
+        fiskare: fiskareEl.value,
+        fisksort: fisksortEl.value,
+        vikt: parseFloat(viktEl.value),
         tid: new Date().toLocaleString('sv-SE')
       };
 
