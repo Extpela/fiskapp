@@ -4,7 +4,6 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// HÄR: Fyll i din egen Supabase-info
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const TABLE = 'registreringar';
@@ -12,7 +11,7 @@ const TABLE = 'registreringar';
 app.use(express.static('public'));
 app.use(express.json());
 
-// GET: Hämta alla registreringar
+// Hämta alla registreringar
 app.get('/data', async (req, res) => {
   const result = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?select=*`, {
     headers: {
@@ -24,7 +23,7 @@ app.get('/data', async (req, res) => {
   res.json(data);
 });
 
-// POST: Lägg till ny registrering
+// Lägg till ny registrering
 app.post('/registrera', async (req, res) => {
   const post = req.body;
   const result = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}`, {
@@ -38,6 +37,20 @@ app.post('/registrera', async (req, res) => {
     body: JSON.stringify([post])
   });
   res.json({ status: 'ok' });
+});
+
+// Radera en registrering med id
+app.delete('/radera/:id', async (req, res) => {
+  const id = req.params.id;
+  const result = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Prefer: 'return=minimal'
+    }
+  });
+  res.json({ status: 'deleted' });
 });
 
 app.listen(PORT, () => {
