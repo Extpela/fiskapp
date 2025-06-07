@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Söröya 2025</title>
+  <title>Fiskregistrering</title>
   <style>
     body {
       font-family: sans-serif;
@@ -81,7 +81,7 @@
   </style>
 </head>
 <body>
-  <h1>Registrera fångst</h1>
+  <h1>Registrera fisk</h1>
   <form id="fiskForm">
     <input type="hidden" id="redigerarIndex" value="">
     <label>Fiskare</label>
@@ -181,11 +181,19 @@
 
     document.getElementById('fiskForm').addEventListener('submit', async e => {
       e.preventDefault();
+      const fiskareEl = document.getElementById('fiskare');
+      const fisksortEl = document.getElementById('fisksort');
+      const viktEl = document.getElementById('vikt');
+      if (!fiskareEl.value || !fisksortEl.value || !viktEl.value) {
+        alert('Alla fält måste fyllas i');
+        return;
+      }
+
       const index = document.getElementById('redigerarIndex').value;
       const nyPost = {
-        fiskare: document.getElementById('fiskare').value,
-        sort: document.getElementById('fisksort').value,
-        vikt: parseFloat(document.getElementById('vikt').value),
+        fiskare: fiskareEl.value || 'okänd',
+        fisksort: fisksortEl.value || 'okänd',
+        vikt: parseFloat(viktEl.value) || 0,
         tid: new Date().toLocaleString('sv-SE')
       };
 
