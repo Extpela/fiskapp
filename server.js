@@ -1,33 +1,43 @@
-const fs = require('fs');
-const path = require('path');
 const express = require('express');
+const fetch = require('node-fetch');
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// HÄR: Fyll i din egen Supabase-info
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const TABLE = 'registreringar';
 
 app.use(express.static('public'));
 app.use(express.json());
 
-const dataFile = path.join(__dirname, 'fiskdata.json');
-
-function loadData() {
-  if (!fs.existsSync(dataFile)) return [];
-  return JSON.parse(fs.readFileSync(dataFile));
-}
-
-function saveData(data) {
-  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
-}
-
-app.post('/registrera', (req, res) => {
-  const data = loadData();
-  data.push(req.body);
-  saveData(data);
-  res.sendStatus(200);
+// GET: Hämta alla registreringar
+app.get('/data', async (req, res) => {
+  const result = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?select=*`, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
+  const data = await result.json();
+  res.json(data);
 });
 
-app.get('/data', (req, res) => {
-  const data = loadData();
-  res.json(data);
+// POST: Lägg till ny registrering
+app.post('/registrera', async (req, res) => {
+  const post = req.body;
+  const result = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal'
+    },
+    body: JSON.stringify([post])
+  });
+  res.json({ status: 'ok' });
 });
 
 app.listen(PORT, () => {
