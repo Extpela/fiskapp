@@ -10,25 +10,24 @@
     body {
       margin: 0;
       font-family: "Segoe UI", Roboto, sans-serif;
-      background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80') no-repeat center center fixed;
-      background-size: cover;
-      color: #fff;
+      background: #f4f4f4;
+      color: #333;
     }
     header {
-      background: rgba(0, 0, 0, 0.6);
+      background: #007acc;
       padding: 1rem;
       text-align: center;
       font-size: 2rem;
       font-weight: bold;
-      backdrop-filter: blur(4px);
+      color: white;
     }
     main {
       max-width: 650px;
       margin: 2rem auto;
       padding: 1rem;
-      background: rgba(0,0,0,0.6);
+      background: white;
       border-radius: 16px;
-      backdrop-filter: blur(6px);
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     label {
       display: block;
@@ -36,14 +35,13 @@
       font-weight: 500;
     }
     select, input[type="number"], input[type="file"], button {
-      width: 100%;
+      width: calc(100% - 1px);
       padding: 0.6rem;
       font-size: 1rem;
       margin-top: 0.3rem;
       border-radius: 8px;
-      border: none;
-      background: #fff;
-      color: #333;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
     }
     button {
       background: #00bcd4;
@@ -51,15 +49,17 @@
       font-weight: bold;
       margin-top: 1rem;
       cursor: pointer;
+      border: none;
     }
     button:hover {
       background: #0097a7;
     }
     #lista li {
-      background: rgba(255, 255, 255, 0.1);
+      background: #f9f9f9;
       padding: 1rem;
       border-radius: 10px;
       margin-bottom: 1rem;
+      border: 1px solid #e0e0e0;
     }
     .actions button {
       background: #f44336;
@@ -86,14 +86,14 @@
     }
     pre {
       white-space: pre-wrap;
-      background: rgba(255,255,255,0.1);
+      background: #f0f0f0;
       padding: 1rem;
       border-radius: 10px;
       margin-bottom: 1rem;
     }
     canvas {
       margin: 2rem 0;
-      background: rgba(255,255,255,0.1);
+      background: #f4f4f4;
       border-radius: 10px;
       padding: 1rem;
     }
@@ -121,7 +121,7 @@
       <input type="number" id="vikt" step="0.1" required>
 
       <label>Bild</label>
-      <input type="file" id="bild" accept="image/*" capture="environment">
+      <input type="file" id="bild" accept="image/*">
       <img id="preview" class="preview" style="display:none">
 
       <button type="submit">Spara</button>
@@ -138,153 +138,5 @@
   <div id="popup" class="popup" style="display:none;" onclick="this.style.display='none'">
     <img id="popupImg" src="">
   </div>
-
-  <script>
-    let aktuellData = [];
-
-    function visaPopup(url) {
-      document.getElementById('popupImg').src = url;
-      document.getElementById('popup').style.display = 'flex';
-    }
-
-    async function hämtaData() {
-      const res = await fetch('/data');
-      return await res.json();
-    }
-
-    async function radera(id) {
-      await fetch('/radera/' + id, { method: 'DELETE' });
-      visaLista();
-      summeraOchVisa();
-    }
-
-    async function visaLista() {
-      aktuellData = await hämtaData();
-      const lista = document.getElementById('lista');
-      lista.innerHTML = '';
-      aktuellData.forEach(post => {
-        const li = document.createElement('li');
-        li.innerHTML = `
-          🐟 <strong>${post.fiskare}</strong> fick <strong>${post.fisksort}</strong>: ${post.vikt} kg<br>
-          <small>${post.tid}</small><br>
-          ${post.bildUrl ? `<img src="${post.bildUrl}" style="max-width:100px;cursor:pointer;" onclick="visaPopup('${post.bildUrl}')">` : ''}
-          ${post.lat ? `<div>📍 <a href="https://www.google.com/maps?q=${post.lat},${post.lng}" target="_blank">Visa på karta</a></div>` : ''}
-          <div class="actions">
-            <button onclick="radera('${post.id}')">🗑️ Radera</button>
-          </div>
-        `;
-        lista.appendChild(li);
-      });
-    }
-
-    async function summeraOchVisa() {
-      const data = await hämtaData();
-      const sorter = {}, fiskare = {};
-      data.forEach(item => {
-        sorter[item.fisksort] = (sorter[item.fisksort] || 0) + item.vikt;
-        fiskare[item.fiskare] = (fiskare[item.fiskare] || 0) + item.vikt;
-      });
-
-      document.getElementById('summaSort').textContent =
-        Object.entries(sorter).map(([s, v]) => `🐟 ${s}: ${v.toFixed(1)} kg`).join("\n");
-      document.getElementById('summaFiskare').textContent =
-        Object.entries(fiskare).map(([n, v]) => `👤 ${n}: ${v.toFixed(1)} kg`).join("\n");
-
-      const ctx = document.getElementById('fiskChart').getContext('2d');
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: Object.keys(sorter),
-          datasets: [{
-            label: 'Fångad vikt per art (kg)',
-            data: Object.values(sorter),
-            backgroundColor: 'rgba(0,188,212,0.6)',
-            borderColor: 'rgba(0,188,212,1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { color: 'white' }
-            },
-            x: {
-              ticks: { color: 'white' }
-            }
-          },
-          plugins: {
-            legend: {
-              labels: { color: 'white' }
-            }
-          }
-        }
-      });
-    }
-
-    document.getElementById('bild').addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          document.getElementById('preview').src = reader.result;
-          document.getElementById('preview').style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    async function hämtaPosition() {
-      return new Promise(resolve => {
-        navigator.geolocation.getCurrentPosition(pos => {
-          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        }, () => resolve({ lat: null, lng: null }));
-      });
-    }
-
-    document.getElementById('fiskForm').addEventListener('submit', async e => {
-      e.preventDefault();
-      const fiskare = document.getElementById('fiskare').value;
-      const fisksort = document.getElementById('fisksort').value;
-      const vikt = parseFloat(document.getElementById('vikt').value) || 0;
-      const bild = document.getElementById('bild').files[0];
-      const pos = await hämtaPosition();
-      let bildUrl = null;
-
-      if (bild) {
-        const form = new FormData();
-        const filnamn = Date.now() + "_" + bild.name;
-        form.append('file', bild, filnamn);
-        const res = await fetch('/upload', {
-          method: 'POST',
-          body: form
-        });
-        const data = await res.json();
-        bildUrl = data.url;
-      }
-
-      const nyPost = {
-        fiskare, fisksort, vikt,
-        tid: new Date().toLocaleString('sv-SE'),
-        bildUrl,
-        lat: pos.lat, lng: pos.lng
-      };
-
-      await fetch('/registrera', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nyPost)
-      });
-
-      document.getElementById('fiskForm').reset();
-      document.getElementById('preview').style.display = 'none';
-      document.getElementById('resultat').textContent = 'Registrering sparad!';
-      visaLista();
-      summeraOchVisa();
-    });
-
-    visaLista();
-    summeraOchVisa();
-  </script>
 </body>
 </html>
