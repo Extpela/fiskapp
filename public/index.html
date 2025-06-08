@@ -128,7 +128,11 @@
       <p id="resultat"></p>
     </form>
 
+    
+    <label for="datumFilter">Filtrera på datum</label>
+    <input type="date" id="datumFilter" style="width: 100%; padding: 0.5rem; margin-bottom: 1rem;">
     <ul id="lista"></ul>
+    
     <pre id="summaSort"></pre>
     <pre id="summaFiskare"></pre>
 
@@ -138,5 +142,162 @@
   <div id="popup" class="popup" style="display:none;" onclick="this.style.display='none'">
     <img id="popupImg" src="">
   </div>
+
+  <div id="popup" class="popup" style="display:none;" onclick="this.style.display='none'">
+    <img id="popupImg" src="">
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    let aktuellData = [];
+
+    function visaPopup(url) {
+      document.getElementById('popupImg').src = url;
+      document.getElementById('popup').style.display = 'flex';
+    }
+
+    async function hämtaData() {
+      const res = await fetch('/data');
+      return await res.json();
+    }
+
+    async function radera(id) {
+      await fetch('/radera/' + id, { method: 'DELETE' });
+      visaLista();
+      summeraOchVisa();
+    }
+
+    async function visaLista() {
+      aktuellData = await hämtaData();
+      const lista = document.getElementById('lista');
+      lista.innerHTML = '';
+      aktuellData
+      .filter(post => {
+        const datum = document.getElementById('datumFilter').value;
+        if (!datum) return true;
+        return post.tid && post.tid.startsWith(datum);
+      })
+      .forEach(post => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          🐟 <strong>${post.fiskare}</strong> fick <strong>${post.fisksort}</strong>: ${post.vikt} kg<br>
+          <small>${post.tid}</small><br>
+          ${post.bildUrl ? `<img src="${post.bildUrl}" style="max-width:100px;cursor:pointer;" onclick="visaPopup('${post.bildUrl}')">` : ''}
+          ${post.lat ? `<div>📍 <a href="https://www.google.com/maps?q=${post.lat},${post.lng}" target="_blank">Visa på karta</a></div>` : ''}
+          <div class="actions">
+            <button onclick="radera('${post.id}')">🗑️ Radera</button>
+          </div>
+        `;
+        lista.appendChild(li);
+      });
+    }
+
+    async function summeraOchVisa() {
+      const data = await hämtaData();
+      const sorter = {}, fiskare = {};
+      data.forEach(item => {
+        sorter[item.fisksort] = (sorter[item.fisksort] || 0) + item.vikt;
+        fiskare[item.fiskare] = (fiskare[item.fiskare] || 0) + item.vikt;
+      });
+
+      document.getElementById('summaSort').textContent =
+        Object.entries(sorter).map(([s, v]) => `🐟 ${s}: ${v.toFixed(1)} kg`).join("\n");
+      document.getElementById('summaFiskare').textContent =
+        Object.entries(fiskare).map(([n, v]) => `👤 ${n}: ${v.toFixed(1)} kg`).join("\n");
+
+      const ctx = document.getElementById('fiskChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(sorter),
+          datasets: [{
+            label: 'Fångad vikt per art (kg)',
+            data: Object.values(sorter),
+            backgroundColor: 'rgba(0,188,212,0.6)',
+            borderColor: 'rgba(0,188,212,1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true, ticks: { color: '#333' } },
+            x: { ticks: { color: '#333' } }
+          },
+          plugins: {
+            legend: { labels: { color: '#333' } }
+          }
+        }
+      });
+    }
+
+    document.getElementById('bild').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          document.getElementById('preview').src = reader.result;
+          document.getElementById('preview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    async function hämtaPosition() {
+      return new Promise(resolve => {
+        navigator.geolocation.getCurrentPosition(pos => {
+          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        }, () => resolve({ lat: null, lng: null }));
+      });
+    }
+
+    document.getElementById('datumFilter').addEventListener('change', () => {
+      visaLista();
+      summeraOchVisa();
+    });
+
+    document.getElementById('fiskForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const fiskare = document.getElementById('fiskare').value;
+      const fisksort = document.getElementById('fisksort').value;
+      const vikt = parseFloat(document.getElementById('vikt').value) || 0;
+      const bild = document.getElementById('bild').files[0];
+      const pos = await hämtaPosition();
+      let bildUrl = null;
+
+      if (bild) {
+        const form = new FormData();
+        const filnamn = Date.now() + "_" + bild.name;
+        form.append('file', bild, filnamn);
+        const res = await fetch('/upload', {
+          method: 'POST',
+          body: form
+        });
+        const data = await res.json();
+        bildUrl = data.url;
+      }
+
+      const nyPost = {
+        fiskare, fisksort, vikt,
+        tid: new Date().toLocaleString('sv-SE'),
+        bildUrl,
+        lat: pos.lat, lng: pos.lng
+      };
+
+      await fetch('/registrera', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nyPost)
+      });
+
+      document.getElementById('fiskForm').reset();
+      document.getElementById('preview').style.display = 'none';
+      document.getElementById('resultat').textContent = 'Registrering sparad!';
+      visaLista();
+      summeraOchVisa();
+    });
+
+    visaLista();
+    summeraOchVisa();
+  </script>
 </body>
 </html>
