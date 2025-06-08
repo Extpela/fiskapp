@@ -8,7 +8,6 @@ const app = express();
 const upload = multer();
 const PORT = process.env.PORT || 3000;
 
-// Supabase-info från miljövariabler
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const STORAGE_BUCKET = 'bilder';
@@ -69,7 +68,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// Starta servern
 app.listen(PORT, () => {
   console.log(`Servern körs på port ${PORT}`);
 });
