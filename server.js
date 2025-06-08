@@ -68,6 +68,25 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+// Radera post via ID
+app.delete('/radera/:id', async (req, res) => {
+  const id = req.params.id;
+  const result = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      Prefer: 'return=minimal'
+    }
+  });
+
+  if (result.ok) {
+    res.json({ status: 'deleted' });
+  } else {
+    res.status(500).json({ error: 'Kunde inte radera' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Servern körs på port ${PORT}`);
 });
